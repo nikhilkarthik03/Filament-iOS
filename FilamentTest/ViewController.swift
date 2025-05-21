@@ -11,9 +11,10 @@ class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        view.backgroundColor = .red
+        
+        var FilamentView = FilamentView()
         // Do any additional setup after loading the view.
     }
-
-
 }
 

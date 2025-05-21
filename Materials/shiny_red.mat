@@ -1,0 +1,23 @@
+material {
+    name : shinyRed,
+    shadingModel : lit,
+    parameters : [
+        { type : float3, name : baseColor },
+        { type : float, name : metallic },
+        { type : float, name : roughness }
+    ],
+    requires : [
+        uv0, tangents
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        
+        // Deep red color with high metallic and low roughness for shine
+        material.baseColor = float4(materialParams.baseColor, 1.0);
+        material.metallic = materialParams.metallic;
+        material.roughness = materialParams.roughness;
+    }
+}

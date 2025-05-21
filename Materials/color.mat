@@ -1,0 +1,16 @@
+material {
+    name : color,
+    shadingModel : unlit,
+    requires : [ color ],
+    
+    // Allow receiving vertex colors
+    vertexDomain : object
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = getColor();
+    }
+}
+

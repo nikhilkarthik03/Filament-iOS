@@ -1,0 +1,14 @@
+# Personal settings
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+*.DS_Store
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+DerivedData/
+build/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings

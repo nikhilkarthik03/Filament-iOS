@@ -6,3 +6,10 @@
 //
 
 import Foundation
+import UIKit
+import MetalKit
+
+
+class SwiftFilamentView: MTKView {
+    
+}

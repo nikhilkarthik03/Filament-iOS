@@ -6,8 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		2A6573716DD2AF5DF715FB5F /* libPods-FilamentTest.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 199F988F03E81BC750C4EE67 /* libPods-FilamentTest.a */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		199F988F03E81BC750C4EE67 /* libPods-FilamentTest.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-FilamentTest.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		78C4142F2DDC926B00771170 /* FilamentTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FilamentTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A74A80C5496D4000A0FECD5E /* Pods-FilamentTest.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FilamentTest.debug.xcconfig"; path = "Target Support Files/Pods-FilamentTest/Pods-FilamentTest.debug.xcconfig"; sourceTree = "<group>"; };
+		FC786064BEE18274B1935A6B /* Pods-FilamentTest.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FilamentTest.release.xcconfig"; path = "Target Support Files/Pods-FilamentTest/Pods-FilamentTest.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -29,6 +36,11 @@
 			path = FilamentTest;
 			sourceTree = "<group>";
 		};
+		78C414692DDCAE4900771170 /* Materials */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Materials;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -36,17 +48,38 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2A6573716DD2AF5DF715FB5F /* libPods-FilamentTest.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		508F77C2866232127A4B0723 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				199F988F03E81BC750C4EE67 /* libPods-FilamentTest.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		62BE4E9A9248805165DAE888 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				A74A80C5496D4000A0FECD5E /* Pods-FilamentTest.debug.xcconfig */,
+				FC786064BEE18274B1935A6B /* Pods-FilamentTest.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		78C414262DDC926B00771170 = {
 			isa = PBXGroup;
 			children = (
+				78C414692DDCAE4900771170 /* Materials */,
 				78C414312DDC926B00771170 /* FilamentTest */,
 				78C414302DDC926B00771170 /* Products */,
+				62BE4E9A9248805165DAE888 /* Pods */,
+				508F77C2866232127A4B0723 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -65,6 +98,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 78C414422DDC926C00771170 /* Build configuration list for PBXNativeTarget "FilamentTest" */;
 			buildPhases = (
+				27C1ACD43B42DEB43596D5E2 /* [CP] Check Pods Manifest.lock */,
 				78C4142B2DDC926B00771170 /* Sources */,
 				78C4142C2DDC926B00771170 /* Frameworks */,
 				78C4142D2DDC926B00771170 /* Resources */,
@@ -75,10 +109,9 @@
 			);
 			fileSystemSynchronizedGroups = (
 				78C414312DDC926B00771170 /* FilamentTest */,
+				78C414692DDCAE4900771170 /* Materials */,
 			);
 			name = FilamentTest;
-			packageProductDependencies = (
-			);
 			productName = FilamentTest;
 			productReference = 78C4142F2DDC926B00771170 /* FilamentTest.app */;
 			productType = "com.apple.product-type.application";
@@ -95,6 +128,7 @@
 				TargetAttributes = {
 					78C4142E2DDC926B00771170 = {
 						CreatedOnToolsVersion = 16.3;
+						LastSwiftMigration = 1630;
 					};
 				};
 			};
@@ -127,6 +161,31 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		27C1ACD43B42DEB43596D5E2 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-FilamentTest-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		78C4142B2DDC926B00771170 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -140,9 +199,11 @@
 /* Begin XCBuildConfiguration section */
 		78C414432DDC926C00771170 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A74A80C5496D4000A0FECD5E /* Pods-FilamentTest.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = K6FZYUHLAF;
@@ -150,7 +211,7 @@
 				INFOPLIST_FILE = FilamentTest/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UIMainStoryboardFile = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -161,6 +222,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.flam.FilamentTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "FilamentTest/FilamentTest-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -168,9 +231,11 @@
 		};
 		78C414442DDC926C00771170 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = FC786064BEE18274B1935A6B /* Pods-FilamentTest.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = K6FZYUHLAF;
@@ -178,7 +243,7 @@
 				INFOPLIST_FILE = FilamentTest/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UIMainStoryboardFile = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -189,6 +254,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.flam.FilamentTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "FilamentTest/FilamentTest-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
