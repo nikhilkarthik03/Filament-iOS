@@ -1,0 +1,8 @@
+material {
+    name : "Textured",
+    parameters : [
+        { type : sampler2d, name : baseColor }
+    ],
+    requires : [ uv0 ],
+    shadingModel : lit
+}

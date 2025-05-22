@@ -19,17 +19,24 @@
 #include <filament/MaterialInstance.h>
 #include <filament/TransformManager.h>
 
+#include <filameshio/MeshReader.h>
+#include <filament/Texture.h>
+#include <filament/TextureSampler.h>
+#include <filament/LightManager.h>
+
+
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
 
 #include "FilamentView.h"
 #import <MetalKit/MTKView.h>
 
+using namespace filamesh;
 using namespace filament;
 using namespace utils;
 
 @interface FilamentView() <MTKViewDelegate>
-
+@property (nonatomic, strong) CADisplayLink *displayLink;
 @end
 
 @implementation FilamentView{
@@ -46,138 +53,210 @@ using namespace utils;
     IndexBuffer* _cubeIndexBuffer;
     Material* _material;
     MaterialInstance* _materialInstance;
-
-    float _rotationRadians;
+    
+    Texture* _whiteTexture;
+    MTKView* _mtkView;
+    
+    bool _initialized;
 }
-
-struct CubeVertex {
-    math::float3 position;
-    math::float3 color;
-};
-
-static const CubeVertex CUBE_VERTICES[] = {
-    {{-1, -1,  1}, {1, 0, 0}}, {{1, -1,  1}, {0, 1, 0}}, {{1,  1,  1}, {0, 0, 1}}, {{-1,  1,  1}, {1, 1, 0}}, // front
-    {{-1, -1, -1}, {1, 0, 1}}, {{1, -1, -1}, {0, 1, 1}}, {{1,  1, -1}, {1, 1, 1}}, {{-1,  1, -1}, {0.5, 0.5, 0.5}} // back
-};
-
-static const uint16_t CUBE_INDICES[] = {
-    0,1,2, 2,3,0,  // front
-    1,5,6, 6,2,1,  // right
-    5,4,7, 7,6,5,  // back
-    4,0,3, 3,7,4,  // left
-    3,2,6, 6,7,3,  // top
-    4,5,1, 1,0,4   // bottom
-};
-
 
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    // Create the Filament engine - explicitly specify Metal backend
-    _engine = Engine::create(Engine::Backend::METAL);
-    
-    // Set up Metal view
+    _initialized = false;
+
+    // Create the Metal view first
     id<MTLDevice> device = MTLCreateSystemDefaultDevice();
-    MTKView *mtkView = [[MTKView alloc] initWithFrame: self.view.bounds device:device];
-    mtkView.delegate = self;
-    mtkView.preferredFramesPerSecond = 60;
-    [self.view addSubview:mtkView];
-    
-    mtkView.translatesAutoresizingMaskIntoConstraints = NO;
+    _mtkView = [[MTKView alloc] initWithFrame: self.view.bounds device:device];
+    _mtkView.delegate = self;
+    _mtkView.preferredFramesPerSecond = 60;
+    _mtkView.enableSetNeedsDisplay = YES;
+    [self.view addSubview:_mtkView];
+
+    _mtkView.translatesAutoresizingMaskIntoConstraints = NO;
     [NSLayoutConstraint activateConstraints:@[
-        [mtkView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
-        [mtkView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
-        [mtkView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
-        [mtkView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+        [_mtkView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+        [_mtkView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
+        [_mtkView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+        [_mtkView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
     ]];
-    
-    // Create Filament core components
-    _swapChain = _engine->createSwapChain((__bridge void*) mtkView.layer);
+
+    // Now initialize Filament
+    [self initFilament];
+}
+
+- (void)initFilament {
+    // Create engine with the Metal backend
+    _engine = Engine::create(Engine::Backend::METAL);
+    if (!_engine) {
+        NSLog(@"❌ Failed to create Filament engine");
+        return;
+    }
+
+    // Create the SwapChain from the MTKView's layer
+    _swapChain = _engine->createSwapChain((__bridge void*) _mtkView.layer);
+    if (!_swapChain) {
+        NSLog(@"❌ Failed to create SwapChain");
+        return;
+    }
+
+    // Create renderer
     _renderer = _engine->createRenderer();
+    if (!_renderer) {
+        NSLog(@"❌ Failed to create Renderer");
+        return;
+    }
+
+    // Create view
     _view = _engine->createView();
+    if (!_view) {
+        NSLog(@"❌ Failed to create View");
+        return;
+    }
+
+    // Create scene
     _scene = _engine->createScene();
-    
+    if (!_scene) {
+        NSLog(@"❌ Failed to create Scene");
+        return;
+    }
+
+    // Create camera entity
     _cameraEntity = EntityManager::get().create();
     _camera = _engine->createCamera(_cameraEntity);
+    if (!_camera) {
+        NSLog(@"❌ Failed to create Camera");
+        return;
+    }
 
-    // Set clear color
-    _renderer->setClearOptions({
-        .clearColor = {0.25f, 0.5f, 1.0f, 1.0f},
-        .clear = true
-    });
-    
+    _renderer->setClearOptions({ .clearColor = {0.2f, 0.4f, 0.7f, 1.0f}, .clear = true });
+
     _view->setScene(_scene);
     _view->setCamera(_camera);
-    
-    [self resize:mtkView.drawableSize];
-    
-    // Build cube vertex/index buffers
-    const uint8_t stride = sizeof(CubeVertex);
-    using Type = VertexBuffer::AttributeType;
+    [self resize:_mtkView.drawableSize];
 
-    _cubeVertexBuffer = VertexBuffer::Builder()
-        .vertexCount(8)
-        .bufferCount(1)
-        .attribute(VertexAttribute::POSITION, 0, Type::FLOAT3, offsetof(CubeVertex, position), stride)
-        .attribute(VertexAttribute::COLOR,    0, Type::FLOAT3, offsetof(CubeVertex, color),    stride)
-        .build(*_engine);
-
-    _cubeIndexBuffer = IndexBuffer::Builder()
-        .indexCount(sizeof(CUBE_INDICES) / sizeof(uint16_t))
-        .bufferType(IndexBuffer::IndexType::USHORT)
-        .build(*_engine);
-
-    VertexBuffer::BufferDescriptor vb(CUBE_VERTICES, sizeof(CUBE_VERTICES), nullptr);
-    IndexBuffer::BufferDescriptor ib(CUBE_INDICES, sizeof(CUBE_INDICES), nullptr);
-
-    _cubeVertexBuffer->setBufferAt(*_engine, 0, std::move(vb));
-    _cubeIndexBuffer->setBuffer(*_engine, std::move(ib));
-
-    // Load material - make sure color.filamat is compiled for Metal
-    NSString *materialPath = [[NSBundle mainBundle] pathForResource:@"color" ofType:@"filamat"];
+    // Load material
+    NSString *materialPath = [[NSBundle mainBundle] pathForResource:@"ball" ofType:@"filamat"];
     if (!materialPath) {
-        NSLog(@"Error: color.filamat not found in bundle!");
+        NSLog(@"❌ Cannot find ball.filamat in bundle");
         return;
     }
     
-    NSData* data = [NSData dataWithContentsOfFile:materialPath];
-    if (!data) {
-        NSLog(@"Error: Failed to load color.filamat data!");
+    NSData *materialData = [NSData dataWithContentsOfFile:materialPath];
+    if (!materialData) {
+        NSLog(@"❌ Failed to load ball.filamat");
         return;
     }
-    
-    // Create material from data
+
     _material = Material::Builder()
-        .package([data bytes], (size_t)data.length)
+        .package(materialData.bytes, materialData.length)
         .build(*_engine);
-        
+    
     if (!_material) {
-        NSLog(@"Error: Failed to create material!");
+        NSLog(@"❌ Failed to build material");
         return;
     }
     
     _materialInstance = _material->createInstance();
+    if (!_materialInstance) {
+        NSLog(@"❌ Failed to create material instance");
+        return;
+    }
 
-    // Create cube entity
-    _cube = EntityManager::get().create();
-
-    // Get transform manager and create transform component for cube
-    auto& tcm = _engine->getTransformManager();
-    tcm.create(_cube);
+    // Create a 1x1 white texture for baseColor
+    uint8_t whitePixel[4] = {255, 255, 255, 255};
+    _whiteTexture = Texture::Builder()
+        .width(1).height(1).levels(1)
+        .sampler(Texture::Sampler::SAMPLER_2D)
+        .format(Texture::InternalFormat::RGBA8)
+        .build(*_engine);
+        
+    if (!_whiteTexture) {
+        NSLog(@"❌ Failed to create white texture");
+        return;
+    }
     
-    // Create renderable for cube
-    RenderableManager::Builder(1)
-        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, _cubeVertexBuffer, _cubeIndexBuffer)
-        .material(0, _materialInstance)
-        .culling(false)
-        .receiveShadows(false)
-        .castShadows(false)
-        .build(*_engine, _cube);
+    Texture::PixelBufferDescriptor buffer(
+        whitePixel, 4, Texture::Format::RGBA, Texture::Type::UBYTE,
+        [](void*, size_t, void*) {}, nullptr
+    );
+    _whiteTexture->setImage(*_engine, 0, std::move(buffer));
+
+    TextureSampler sampler(TextureSampler::MinFilter::LINEAR, TextureSampler::MagFilter::LINEAR);
+    _materialInstance->setParameter("baseColor", _whiteTexture, sampler);
+
+    // Load filamesh
+    NSString *meshPath = [[NSBundle mainBundle] pathForResource:@"ball" ofType:@"filamesh"];
+    if (!meshPath) {
+        NSLog(@"❌ Cannot find ball.filamesh in bundle");
+        return;
+    }
+    
+    NSData *meshData = [NSData dataWithContentsOfFile:meshPath];
+    if (!meshData) {
+        NSLog(@"❌ Failed to load ball.filamesh");
+        return;
+    }
+
+    // Create a copy of the mesh data to ensure it stays valid during loading
+    void* meshDataCopy = malloc(meshData.length);
+    memcpy(meshDataCopy, meshData.bytes, meshData.length);
+    
+    // Using a destructor that frees the memory when filament is done with it
+    auto meshDataDestructor = [](void* buffer, size_t size, void* user) {
+        free(buffer);
+    };
+    
+    MeshReader::Mesh mesh = MeshReader::loadMeshFromBuffer(
+        _engine,
+        meshDataCopy,
+        meshDataDestructor,
+        nullptr,
+        _materialInstance
+    );
+
+    _cubeVertexBuffer = mesh.vertexBuffer;
+    _cubeIndexBuffer = mesh.indexBuffer;
+    _cube = mesh.renderable;
+
+    if (!_cube) {
+        NSLog(@"❌ Failed to create mesh renderable entity");
+        return;
+    }
+
+    // Check if transform component exists
+    auto& tcm = _engine->getTransformManager();
+    if (!tcm.hasComponent(_cube)) {
+        NSLog(@"❌ Renderable entity doesn't have transform component");
+        EntityManager::get().destroy(_cube);
+        return;
+    }
+
+    // Position the ball in front of the camera and scale it
+    // The scale factor of 2.0 will make the cube twice as large in each dimension
+    math::float3 position{0, 0, 0};
+    math::float3 scale{10.0f, 10.0f, 10.0f}; // Scale by 2x in each dimension
+
+    math::mat4f translation = math::mat4f::translation(position);
+    math::mat4f scaling = math::mat4f::scaling(scale);
+    math::mat4f transform = translation * scaling; // Apply scaling after translation
+
+    tcm.setTransform(tcm.getInstance(_cube), transform);
 
     _scene->addEntity(_cube);
+    // Add directional light
+    Entity light = EntityManager::get().create();
+    LightManager::Builder(LightManager::Type::SUN)
+        .color(math::float3{1.0f, 1.0f, 1.0f})
+        .intensity(100000.0f)
+        .direction(math::float3{0.0f, -1.0f, -1.0f})
+        .castShadows(false)
+        .build(*_engine, light);
+
+    _scene->addEntity(light);
     
-    // Initialize rotation
-    _rotationRadians = 0.0f;
+    _initialized = true;
+    NSLog(@"✅ Filament initialization complete");
 }
 
 - (void)mtkView:(nonnull MTKView*)view drawableSizeWillChange:(CGSize)size {
@@ -185,36 +264,39 @@ static const uint16_t CUBE_INDICES[] = {
 }
 
 - (void)resize:(CGSize)size {
+    if (!_view || !_camera || !_engine) return;
+    
     _view->setViewport({0, 0, (uint32_t) size.width, (uint32_t) size.height});
 
     const double aspect = size.width / size.height;
-    const double left   = -2.0 * aspect;
-    const double right  =  2.0 * aspect;
-    const double bottom = -2.0;
-    const double top    =  2.0;
-    const double near   =  0.1;  // Changed from 0.0 to avoid near plane issues
-    const double far    =  10.0; // Increased for better depth range
-    _camera->setProjection(Camera::Projection::ORTHO, left, right, bottom, top, near, far);
     
-    // Position camera to look at the cube
-    _engine->getTransformManager().setTransform(
-        _engine->getTransformManager().getInstance(_cameraEntity),
-        math::mat4f::translation(math::float3{0, 0, 5})
-    );
+    // Switch to perspective projection for better 3D visualization
+    const double fov = 45.0 * M_PI / 180.0; // 45 degrees field of view in radians
+    const double near = 0.1;
+    const double far = 100.0;
+    
+    _camera->setProjection(Camera::Projection::PERSPECTIVE,
+                          -aspect * std::tan(fov / 2),  // left
+                          aspect * std::tan(fov / 2),   // right
+                          -std::tan(fov / 2),           // bottom
+                          std::tan(fov / 2),            // top
+                          near, far);
+    
+    // Position camera to look at the center
+    auto& tcm = _engine->getTransformManager();
+    if (tcm.hasComponent(_cameraEntity)) {
+        tcm.setTransform(
+            tcm.getInstance(_cameraEntity),
+            math::mat4f::translation(math::float3{0, 0, 5}) *
+            math::mat4f::lookAt(math::float3{0, 0, 5}, math::float3{0, 0, 0}, math::float3{0, 1, 0})
+        );
+    }
 }
 
 - (void)drawInMTKView:(nonnull MTKView*)view {
+    if (!_initialized || !_renderer || !_swapChain || !_view) return;
+    
     if (_renderer->beginFrame(_swapChain)) {
-        // Update cube rotation
-        _rotationRadians += 0.01f;
-        math::mat4f tiltMatrix = math::mat4f::rotation(0.3f, math::float3{1, 0, 0});
-        math::mat4f rotationMatrix = math::mat4f::rotation(_rotationRadians, math::float3{0, 1, 0});
-        math::mat4f transform = math::mat4f::translation(math::float3{0, 0, 0}) * rotationMatrix * tiltMatrix;
-        _engine->getTransformManager().setTransform(
-            _engine->getTransformManager().getInstance(_cube),
-            transform
-        );
-        
         // Render the scene
         _renderer->render(_view);
         _renderer->endFrame();
@@ -222,50 +304,74 @@ static const uint16_t CUBE_INDICES[] = {
 }
 
 - (void)dealloc {
-    // Clean up Filament resources in reverse order of creation
     if (_engine) {
         // Destroy entities first
-        _engine->destroyCameraComponent(_cameraEntity);
-        EntityManager::get().destroy(_cameraEntity);
-        
-        // Clean up materials
+        if (_camera) {
+            _engine->destroyCameraComponent(_cameraEntity);
+            EntityManager::get().destroy(_cameraEntity);
+        }
+
+        // Remove entities from scene
+        if (_scene) {
+            if (_cube) {
+                _scene->remove(_cube);
+                EntityManager::get().destroy(_cube);
+            }
+        }
+
+        // Destroy material instance before material
         if (_materialInstance) {
             _engine->destroy(_materialInstance);
-        }
-        if (_material) {
-            _engine->destroy(_material);
+            _materialInstance = nullptr;
         }
         
+        if (_material) {
+            _engine->destroy(_material);
+            _material = nullptr;
+        }
+
+        // Destroy white texture
+        if (_whiteTexture) {
+            _engine->destroy(_whiteTexture);
+            _whiteTexture = nullptr;
+        }
+
         // Clean up geometry
         if (_cubeIndexBuffer) {
             _engine->destroy(_cubeIndexBuffer);
+            _cubeIndexBuffer = nullptr;
         }
+        
         if (_cubeVertexBuffer) {
             _engine->destroy(_cubeVertexBuffer);
+            _cubeVertexBuffer = nullptr;
         }
-        
-        // Remove entity from scene and destroy it
-        if (_scene && _cube) {
-            _scene->remove(_cube);
-        }
-        EntityManager::get().destroy(_cube);
-        
+
         // Destroy view, scene, renderer, swapchain
         if (_view) {
             _engine->destroy(_view);
-        }
-        if (_scene) {
-            _engine->destroy(_scene);
-        }
-        if (_renderer) {
-            _engine->destroy(_renderer);
-        }
-        if (_swapChain) {
-            _engine->destroy(_swapChain);
+            _view = nullptr;
         }
         
+        if (_scene) {
+            _engine->destroy(_scene);
+            _scene = nullptr;
+        }
+        
+        if (_renderer) {
+            _engine->destroy(_renderer);
+            _renderer = nullptr;
+        }
+        
+        if (_swapChain) {
+            _engine->destroy(_swapChain);
+            _swapChain = nullptr;
+        }
+
         // Finally destroy the engine
         Engine::destroy(&_engine);
+        _engine = nullptr;
     }
 }
+
 @end
