@@ -10,7 +10,7 @@
 
 #import <UIKit/UIKit.h>
 
-@interface FilamentView : UIViewController
+@interface FilamentView : UIView
 
 
 @end

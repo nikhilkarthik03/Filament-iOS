@@ -1,16 +1,18 @@
 material {
-    name : color,
-    shadingModel : unlit,
-    requires : [ color ],
-    
-    // Allow receiving vertex colors
-    vertexDomain : object
+    name : "pbrMaterial",
+    shadingModel : lit,
+    parameters : [
+        { name : "baseColor", type : float4 },
+        { name : "roughness", type : float },
+        { name : "metallic", type : float }
+    ]
 }
 
 fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
-        material.baseColor = getColor();
+        material.baseColor = materialParams.baseColor;
+        material.roughness = materialParams.roughness;
+        material.metallic = materialParams.metallic;
     }
 }
-
